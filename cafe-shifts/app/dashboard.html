@@ -1,0 +1,18 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Отметка смен</title>
+<style>body{font:16px system-ui;max-width:960px;margin:40px auto;padding:0 18px;color:#20252b}h1{font-size:26px}h2{font-size:19px;margin-top:30px}input,button{font:inherit;padding:9px;border:1px solid #ccd2d8;border-radius:7px}button{cursor:pointer;background:#20252b;color:white}table{border-collapse:collapse;width:100%;margin-top:12px}th,td{text-align:left;padding:11px;border-bottom:1px solid #e4e7eb}.muted{color:#68727d}.error{color:#b42318}</style></head>
+<body><h1>Отметка смен</h1><p class="muted">Показываются данные только вашей точки.</p>
+<h2>Сейчас на смене</h2><div id="current">Загрузка…</div><h2>Часы за месяц</h2>
+<label>Месяц: <input id="month" type="month"></label> <button id="refresh">Обновить</button>
+<table><thead><tr><th>Сотрудник</th><th>Часы</th></tr></thead><tbody id="hours"></tbody></table><p id="error" class="error"></p>
+<script>
+const month=document.querySelector('#month');month.value=new Date().toISOString().slice(0,7);
+function esc(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function load(){document.querySelector('#error').textContent='';try{
+const [a,b]=await Promise.all([fetch('/api/current'),fetch('/api/hours?month='+encodeURIComponent(month.value))]);
+if(!a.ok||!b.ok)throw Error('Не удалось загрузить данные. Проверьте доступ менеджера.');
+const cur=await a.json(),hrs=await b.json();
+document.querySelector('#current').innerHTML=cur.length?'<ul>'+cur.map(x=>'<li>'+esc(x.name)+' — с '+new Date(x.started_at).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})+'</li>').join('')+'</ul>':'<p class="muted">Сейчас никто не отмечен.</p>';
+document.querySelector('#hours').innerHTML=hrs.map(x=>'<tr><td>'+esc(x.employee)+'</td><td>'+x.hours.toFixed(2)+'</td></tr>').join('');
+}catch(e){document.querySelector('#error').textContent=e.message}}
+document.querySelector('#refresh').addEventListener('click',load);load();
+</script></body></html>
